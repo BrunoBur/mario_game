@@ -212,7 +212,7 @@ function playCoinSound() {
   
   gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
   gainNode.gain.linearRampToValueAtTime(0.2, audioCtx.currentTime + 0.02);
-  gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+  gainNode.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
   
   osc.start(audioCtx.currentTime);
   osc.stop(audioCtx.currentTime + 0.3);
@@ -232,11 +232,11 @@ function playJumpSound() {
   gainNode.connect(audioCtx.destination);
 
   osc.frequency.setValueAtTime(150, audioCtx.currentTime);
-  osc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.15);
+  osc.frequency.linearRampToValueAtTime(600, audioCtx.currentTime + 0.15);
 
   gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
   gainNode.gain.linearRampToValueAtTime(0.05, audioCtx.currentTime + 0.02);
-  gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+  gainNode.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
 
   osc.start(audioCtx.currentTime);
   osc.stop(audioCtx.currentTime + 0.15);
@@ -263,7 +263,7 @@ function playLetterSound() {
   gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
   gainNode.gain.linearRampToValueAtTime(0.1, audioCtx.currentTime + 0.05);
   gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime + 0.35);
-  gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+  gainNode.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
   
   osc.start(audioCtx.currentTime);
   osc.stop(audioCtx.currentTime + 0.5);
@@ -282,15 +282,39 @@ function playDamageSound() {
   osc.connect(gainNode);
   gainNode.connect(audioCtx.destination);
   
-  osc.frequency.setValueAtTime(300, audioCtx.currentTime);
-  osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.3);
+  osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+  osc.frequency.linearRampToValueAtTime(40, audioCtx.currentTime + 0.3);
   
   gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
-  gainNode.gain.linearRampToValueAtTime(0.2, audioCtx.currentTime + 0.02);
-  gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+  gainNode.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.02);
+  gainNode.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
   
   osc.start(audioCtx.currentTime);
   osc.stop(audioCtx.currentTime + 0.3);
+}
+
+function playEnemyKillSound() {
+  if (!audioCtx) return;
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+  
+  const osc = audioCtx.createOscillator();
+  const gainNode = audioCtx.createGain();
+  
+  osc.type = 'sine';
+  osc.connect(gainNode);
+  gainNode.connect(audioCtx.destination);
+  
+  osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+  osc.frequency.linearRampToValueAtTime(800, audioCtx.currentTime + 0.1);
+  
+  gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+  gainNode.gain.linearRampToValueAtTime(0.2, audioCtx.currentTime + 0.02);
+  gainNode.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+  
+  osc.start(audioCtx.currentTime);
+  osc.stop(audioCtx.currentTime + 0.1);
 }
 
 let gameState = 'start';
@@ -531,7 +555,7 @@ function updatePlayer() {
           score += 200;
           spawnParticles(e.x + 18, e.y + 18, '#ff4444', 10, '✓');
           updateHUD();
-          playJumpSound();
+          playEnemyKillSound();
         } else {
           playerHit();
         }
