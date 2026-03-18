@@ -128,7 +128,6 @@
 
 <div id="game-wrapper">
 
-  <!-- HUD -->
   <div id="hud">
     <div class="hud-item"><span>PUNTOS</span><span class="hud-val" id="h-score">0</span></div>
     <div class="hud-item"><span>NIVEL</span><span class="hud-val" id="h-level">1</span></div>
@@ -137,28 +136,24 @@
     <div class="hud-item"><span>LETRAS</span><span class="hud-val" id="h-letters">0/5</span></div>
   </div>
 
-  <!-- CANVAS -->
   <canvas id="gameCanvas" width="800" height="480"></canvas>
 
-  <!-- CONTROLS INFO -->
   <div id="controls">
     <span>← → MOVER &nbsp;|&nbsp; ↑ / ESPACIO SALTAR &nbsp;|&nbsp; SHIFT CORRER</span>
     <span>Colecciona letras griegas para completar el nivel 🎓</span>
     <span>ESC PAUSA &nbsp;|&nbsp; <a id="download-btn" href="#" onclick="downloadGame(event)">⬇ DESCARGAR</a></span>
   </div>
 
-  <!-- START SCREEN -->
   <div class="overlay" id="start-screen">
     <h1>🎓 ESTADÍSTICA<br>AVENTURA</h1>
     <h2>Un juego educativo de plataformas</h2>
     <p>Guía a Sigma 🧑 por el mundo de la estadística.<br>
-       Colecciona letras griegas (μ σ Σ x̄ n)<br>
-       y derrota a los Errores de Muestreo 👾</p>
+        Colecciona letras griegas (μ σ Σ x̄ n)<br>
+        y derrota a los Errores de Muestreo 👾</p>
     <button class="btn" onclick="startGame()">▶ INICIAR JUEGO</button>
     <p style="color:#555577; font-size:7px">Flechas para moverse · Espacio/↑ para saltar · Shift para correr</p>
   </div>
 
-  <!-- GAME OVER -->
   <div class="overlay" id="gameover-screen" style="display:none">
     <h1>💀 GAME OVER</h1>
     <h2 id="go-score">Puntuación: 0</h2>
@@ -166,7 +161,6 @@
     <button class="btn" onclick="restartGame()">↺ REINTENTAR</button>
   </div>
 
-  <!-- WIN -->
   <div class="overlay" id="win-screen" style="display:none">
     <h1>🏆 ¡NIVEL COMPLETADO!</h1>
     <h2 id="win-score">Puntuación: 0</h2>
@@ -174,7 +168,6 @@
     <button class="btn" onclick="nextLevel()">▶ SIGUIENTE NIVEL</button>
   </div>
 
-  <!-- PAUSE -->
   <div class="overlay" id="pause-screen" style="display:none">
     <h1>⏸ PAUSA</h1>
     <h2>Letras griegas que debes conocer:</h2>
@@ -189,7 +182,6 @@
     <button class="btn" onclick="resumeGame()">▶ CONTINUAR</button>
   </div>
 
-
 </div>
 
 <script>
@@ -199,6 +191,40 @@
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
+
+const AudioContext = window.AudioContext || window.webkitAudioContext;
+let audioCtx;
+
+function initAudio() {
+  if (!audioCtx) {
+    audioCtx = new AudioContext();
+  }
+}
+
+function playCoinSound() {
+  if (!audioCtx) return;
+  
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+  
+  const osc = audioCtx.createOscillator();
+  const gainNode = audioCtx.createGain();
+  
+  osc.type = 'sine';
+  osc.connect(gainNode);
+  gainNode.connect(audioCtx.destination);
+  
+  osc.frequency.setValueAtTime(987.77, audioCtx.currentTime);
+  osc.frequency.setValueAtTime(1318.51, audioCtx.currentTime + 0.1);
+  
+  gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+  gainNode.gain.linearRampToValueAtTime(0.2, audioCtx.currentTime + 0.02);
+  gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+  
+  osc.start(audioCtx.currentTime);
+  osc.stop(audioCtx.currentTime + 0.3);
+}
 
 // ── ESTADO GLOBAL ────────────────────────────────────────────────
 let gameState = 'start'; // start | playing | paused | gameover | win
@@ -218,10 +244,13 @@ window.addEventListener('keydown', e => {
   keys[e.code] = true;
   if (e.code === 'Escape') togglePause();
   if (['Space','ArrowUp','ArrowLeft','ArrowRight','ShiftLeft','ShiftRight'].includes(e.code)) e.preventDefault();
+  
+  if (!audioCtx && (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'ArrowLeft' || e.code === 'ArrowRight')) {
+      initAudio();
+  }
 });
 window.addEventListener('keyup', e => { keys[e.code] = false; });
 
-// ── BASE DE PREGUNTAS EDUCATIVAS ──────────────────────────────────
 // ── PALETAS DE COLORES POR NIVEL ──────────────────────────────────
 const LEVEL_THEMES = [
   { sky: '#5c94fc', ground: '#a0522d', groundTop: '#228b22', accent: '#ff6b35' }, // verde/azul día
@@ -236,7 +265,7 @@ function buildLevel(num) {
 
   const platforms = [
     // Suelo base
-    { x: 0,    y: 400, w: 3200, h: 80, type: 'ground' },
+    { x: 0,   y: 400, w: 3200, h: 80, type: 'ground' },
     // Plataformas flotantes
     { x: 200,  y: 300, w: 100, h: 20, type: 'platform' },
     { x: 380,  y: 250, w: 120, h: 20, type: 'platform' },
@@ -265,10 +294,9 @@ function buildLevel(num) {
     { x: 2210, y: 215, sym: letterDefs[4], collected: false, quiz: 4 },
   ];
 
-  // Monedas
   const coinList = [];
   for (let i = 0; i < 30; i++) {
-    coinList.push({ x: 300 + i * 90, y: 350 + (i % 3) * (-60), collected: false });
+    coinList.push({ x: 300 + i * 90, y: 370, collected: false });
   }
 
   // Enemigos (Errores de muestreo)
@@ -431,7 +459,6 @@ function updatePlayer() {
     }
   }
 
-  // Colisionar con monedas
   for (const c of level.coinList) {
     if (!c.collected) {
       const cr = { x: c.x, y: c.y, w: 20, h: 20 };
@@ -441,6 +468,7 @@ function updatePlayer() {
         score += 100;
         spawnParticles(c.x + 10, c.y + 10, '#ffd700', 5);
         updateHUD();
+        playCoinSound();
       }
     }
   }
@@ -972,6 +1000,7 @@ function resumeGame() {
 }
 
 function startGame() {
+  initAudio();
   document.getElementById('start-screen').style.display = 'none';
   initLevel(1);
   gameState = 'playing';
