@@ -242,6 +242,57 @@ function playJumpSound() {
   osc.stop(audioCtx.currentTime + 0.15);
 }
 
+function playLetterSound() {
+  if (!audioCtx) return;
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+  
+  const osc = audioCtx.createOscillator();
+  const gainNode = audioCtx.createGain();
+  
+  osc.type = 'square';
+  osc.connect(gainNode);
+  gainNode.connect(audioCtx.destination);
+  
+  osc.frequency.setValueAtTime(523.25, audioCtx.currentTime);
+  osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.1);
+  osc.frequency.setValueAtTime(783.99, audioCtx.currentTime + 0.2);
+  osc.frequency.setValueAtTime(1046.50, audioCtx.currentTime + 0.3);
+  
+  gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+  gainNode.gain.linearRampToValueAtTime(0.1, audioCtx.currentTime + 0.05);
+  gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime + 0.35);
+  gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+  
+  osc.start(audioCtx.currentTime);
+  osc.stop(audioCtx.currentTime + 0.5);
+}
+
+function playDamageSound() {
+  if (!audioCtx) return;
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+  
+  const osc = audioCtx.createOscillator();
+  const gainNode = audioCtx.createGain();
+  
+  osc.type = 'sawtooth';
+  osc.connect(gainNode);
+  gainNode.connect(audioCtx.destination);
+  
+  osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.3);
+  
+  gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+  gainNode.gain.linearRampToValueAtTime(0.2, audioCtx.currentTime + 0.02);
+  gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+  
+  osc.start(audioCtx.currentTime);
+  osc.stop(audioCtx.currentTime + 0.3);
+}
+
 let gameState = 'start';
 let score = 0;
 let lives = 3;
@@ -450,6 +501,7 @@ function updatePlayer() {
         score += 500;
         spawnParticles(lt.x + 18, lt.y + 18, '#ffdd44', 12, lt.sym);
         updateHUD();
+        playLetterSound();
       }
     }
   }
@@ -553,6 +605,7 @@ function playerHit() {
   lives--;
   player.invincible = 90;
   spawnParticles(player.x + 16, player.y + 20, '#ff4444', 10);
+  playDamageSound();
   if (lives <= 0) {
     gameOver();
   } else {
@@ -562,6 +615,7 @@ function playerHit() {
 
 function playerDie() {
   lives--;
+  playDamageSound();
   if (lives <= 0) {
     gameOver();
   } else {
