@@ -67,7 +67,6 @@
     color: #6666aa;
   }
 
-  /* OVERLAY SCREENS */
   .overlay {
     position: absolute;
     top: 0; left: 0;
@@ -103,7 +102,6 @@
   .btn:hover { background: #ffdd44; color: #111; transform: scale(1.05); }
   .btn:active { transform: scale(0.97); }
 
-  /* Botón de descarga */
   #download-btn {
     font-family: 'Press Start 2P', monospace;
     font-size: 9px;
@@ -119,7 +117,6 @@
   }
   #download-btn:hover { background: #00ffaa; color: #001a11; }
 
-  /* STAR decoration */
   .star { position: absolute; border-radius: 50%; animation: twinkle 2s infinite; }
   @keyframes twinkle { 0%,100%{opacity:0.3} 50%{opacity:1} }
 </style>
@@ -185,10 +182,6 @@
 </div>
 
 <script>
-// ═══════════════════════════════════════════════════════════════════
-//  ESTADÍSTICA AVENTURA — Motor del Juego
-// ═══════════════════════════════════════════════════════════════════
-
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
@@ -203,7 +196,6 @@ function initAudio() {
 
 function playCoinSound() {
   if (!audioCtx) return;
-  
   if (audioCtx.state === 'suspended') {
     audioCtx.resume();
   }
@@ -226,8 +218,31 @@ function playCoinSound() {
   osc.stop(audioCtx.currentTime + 0.3);
 }
 
-// ── ESTADO GLOBAL ────────────────────────────────────────────────
-let gameState = 'start'; // start | playing | paused | gameover | win
+function playJumpSound() {
+  if (!audioCtx) return;
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+
+  const osc = audioCtx.createOscillator();
+  const gainNode = audioCtx.createGain();
+
+  osc.type = 'square';
+  osc.connect(gainNode);
+  gainNode.connect(audioCtx.destination);
+
+  osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.15);
+
+  gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+  gainNode.gain.linearRampToValueAtTime(0.05, audioCtx.currentTime + 0.02);
+  gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+
+  osc.start(audioCtx.currentTime);
+  osc.stop(audioCtx.currentTime + 0.15);
+}
+
+let gameState = 'start';
 let score = 0;
 let lives = 3;
 let coins = 0;
@@ -238,7 +253,6 @@ let frameCount = 0;
 let animFrame = null;
 let cameraX = 0;
 
-// ── INPUT ─────────────────────────────────────────────────────────
 const keys = {};
 window.addEventListener('keydown', e => {
   keys[e.code] = true;
@@ -251,22 +265,18 @@ window.addEventListener('keydown', e => {
 });
 window.addEventListener('keyup', e => { keys[e.code] = false; });
 
-// ── PALETAS DE COLORES POR NIVEL ──────────────────────────────────
 const LEVEL_THEMES = [
-  { sky: '#5c94fc', ground: '#a0522d', groundTop: '#228b22', accent: '#ff6b35' }, // verde/azul día
-  { sky: '#1a0533', ground: '#4a2060', groundTop: '#7b2d8b', accent: '#ff00ff' }, // noche púrpura
-  { sky: '#ff6b35', ground: '#8b4513', groundTop: '#cd853f', accent: '#ffd700' }, // amanecer
+  { sky: '#5c94fc', ground: '#a0522d', groundTop: '#228b22', accent: '#ff6b35' },
+  { sky: '#1a0533', ground: '#4a2060', groundTop: '#7b2d8b', accent: '#ff00ff' },
+  { sky: '#ff6b35', ground: '#8b4513', groundTop: '#cd853f', accent: '#ffd700' },
 ];
 
-// ── NIVELES ───────────────────────────────────────────────────────
 function buildLevel(num) {
   const theme = LEVEL_THEMES[(num - 1) % LEVEL_THEMES.length];
   const W = 800;
 
   const platforms = [
-    // Suelo base
     { x: 0,   y: 400, w: 3200, h: 80, type: 'ground' },
-    // Plataformas flotantes
     { x: 200,  y: 300, w: 100, h: 20, type: 'platform' },
     { x: 380,  y: 250, w: 120, h: 20, type: 'platform' },
     { x: 550,  y: 200, w: 100, h: 20, type: 'platform' },
@@ -284,7 +294,6 @@ function buildLevel(num) {
     { x: 2800, y: 220, w: 120, h: 20, type: 'platform' },
   ];
 
-  // Letras griegas para coleccionar
   const letterDefs = ['μ','σ','Σ','x̄','n'];
   const letters = [
     { x: 220,  y: 265, sym: letterDefs[0], collected: false, quiz: 0 },
@@ -299,7 +308,6 @@ function buildLevel(num) {
     coinList.push({ x: 300 + i * 90, y: 370, collected: false });
   }
 
-  // Enemigos (Errores de muestreo)
   const enemies = [
     { x: 500,  y: 375, vx: -1.2, dir: -1, alive: true, label: '??' },
     { x: 800,  y: 375, vx: -1.0, dir: -1, alive: true, label: 'Bias' },
@@ -310,10 +318,8 @@ function buildLevel(num) {
     { x: 2700, y: 375, vx: -1.8, dir: -1, alive: true, label: 'Error' },
   ];
 
-  // Bandera final
   const flag = { x: 3000, y: 160, h: 240 };
 
-  // Bloques ? con preguntas
   const qblocks = [
     { x: 390, y: 210, hit: false, quiz: 5 },
     { x: 1100, y: 165, hit: false, quiz: 6 },
@@ -325,7 +331,6 @@ function buildLevel(num) {
   return { platforms, letters, coinList, enemies, flag, qblocks, theme, worldWidth: 3200 };
 }
 
-// ── JUGADOR ────────────────────────────────────────────────────────
 function createPlayer() {
   return {
     x: 80, y: 330,
@@ -343,7 +348,6 @@ function createPlayer() {
 let level = null;
 let player = null;
 
-// ── PARTÍCULAS ─────────────────────────────────────────────────────
 let particles = [];
 function spawnParticles(x, y, color, n=8, text='') {
   for (let i = 0; i < n; i++) {
@@ -357,7 +361,6 @@ function spawnParticles(x, y, color, n=8, text='') {
   }
 }
 
-// ── FÍSICA ─────────────────────────────────────────────────────────
 const GRAVITY = 0.55;
 const JUMP_FORCE = -13;
 const SPEED = 3.5;
@@ -380,20 +383,20 @@ function updatePlayer() {
     player.facing = 1;
     player.running = true;
   } else {
-    player.vx *= 0.75; // fricción
+    player.vx *= 0.75;
   }
 
   if ((keys['ArrowUp'] || keys['Space']) && player.onGround) {
     player.vy = JUMP_FORCE;
     player.onGround = false;
     spawnParticles(player.x + player.w/2, player.y + player.h, '#ffffff', 5);
+    playJumpSound();
   }
 
   player.vy += GRAVITY;
   player.x += player.vx;
   player.y += player.vy;
 
-  // Colisión con plataformas
   player.onGround = false;
   for (const p of level.platforms) {
     if (rectOverlap(player, p)) {
@@ -401,11 +404,9 @@ function updatePlayer() {
     }
   }
 
-  // Colisión con bloques ?
   for (const b of level.qblocks) {
     if (!b.hit) {
       const bRect = { x: b.x, y: b.y, w: 40, h: 40 };
-      // Golpe desde abajo
       if (player.vy < 0 &&
           player.x + player.w > b.x + 4 &&
           player.x < b.x + 36 &&
@@ -420,19 +421,15 @@ function updatePlayer() {
     }
   }
 
-  // Límites del mundo
   if (player.x < 0) player.x = 0;
   if (player.x + player.w > level.worldWidth) player.x = level.worldWidth - player.w;
 
-  // Caída al vacío
   if (player.y > 520) {
     playerDie();
   }
 
-  // Invencibilidad
   if (player.invincible > 0) player.invincible--;
 
-  // Animación
   if (player.running && player.onGround) {
     player.frameTimer++;
     if (player.frameTimer > 6) { player.frame = (player.frame + 1) % 4; player.frameTimer = 0; }
@@ -442,10 +439,8 @@ function updatePlayer() {
     player.frame = 0;
   }
 
-  // Camera
   cameraX = Math.max(0, Math.min(player.x - 300, level.worldWidth - 800));
 
-  // Colisionar con letras
   for (const lt of level.letters) {
     if (!lt.collected) {
       const lr = { x: lt.x, y: lt.y, w: 36, h: 36 };
@@ -473,19 +468,18 @@ function updatePlayer() {
     }
   }
 
-  // Colisionar con enemigos
   if (player.invincible === 0) {
     for (const e of level.enemies) {
       if (!e.alive) continue;
       const er = { x: e.x, y: e.y, w: 36, h: 36 };
       if (rectOverlap(player, er)) {
-        // Saltar encima del enemigo
         if (player.vy > 0 && player.y + player.h < e.y + 24) {
           e.alive = false;
           player.vy = -8;
           score += 200;
           spawnParticles(e.x + 18, e.y + 18, '#ff4444', 10, '✓');
           updateHUD();
+          playJumpSound();
         } else {
           playerHit();
         }
@@ -493,7 +487,6 @@ function updatePlayer() {
     }
   }
 
-  // Bandera de llegada
   const fl = level.flag;
   if (player.x > fl.x - 20 && player.x < fl.x + 30) {
     if (lettersCollected >= lettersNeeded) {
@@ -531,20 +524,17 @@ function updateEnemies() {
   for (const e of level.enemies) {
     if (!e.alive) continue;
     e.x += e.vx;
-    // Rebotar en bordes del mundo o plataforma
     if (e.x < 0 || e.x + 36 > level.worldWidth) {
       e.vx *= -1;
       e.dir *= -1;
     }
-    // Rebotar si choca con pared de plataforma
     for (const p of level.platforms) {
       if (p.type !== 'ground') continue;
       if (e.x < p.x && e.x + 36 > p.x && e.y + 36 > p.y && e.y < p.y + p.h) {
         e.vx *= -1;
       }
     }
-    // Mantener en suelo
-    e.y = 364; // justo sobre el suelo base
+    e.y = 364;
   }
 }
 
@@ -583,17 +573,14 @@ function playerDie() {
   }
 }
 
-// ── DIBUJO ─────────────────────────────────────────────────────────
 function drawBackground() {
   const theme = level.theme;
-  // Sky gradient
   const grad = ctx.createLinearGradient(0, 0, 0, 480);
   grad.addColorStop(0, theme.sky);
   grad.addColorStop(1, adjustColor(theme.sky, -40));
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, 800, 480);
 
-  // Clouds (parallax 0.3x)
   ctx.fillStyle = 'rgba(255,255,255,0.85)';
   const cloudOffsets = [50, 200, 400, 600, 850, 1100, 1350];
   for (let cx of cloudOffsets) {
@@ -602,7 +589,6 @@ function drawBackground() {
     drawCloud(rx + 30, 90 + (cx % 30));
   }
 
-  // Hills (parallax 0.5x)
   ctx.fillStyle = adjustColor(theme.sky, -20);
   for (let i = 0; i < 8; i++) {
     const hx = ((i * 220 - cameraX * 0.5) % 1800 + 1800) % 1800 - 100;
@@ -634,30 +620,24 @@ function drawPlatform(p) {
   if (sx + p.w < -10 || sx > 810) return;
 
   if (p.type === 'ground') {
-    // Capa superior (césped / tierra)
     ctx.fillStyle = theme.groundTop;
     ctx.fillRect(sx, p.y, p.w, 16);
-    // Tierra
     ctx.fillStyle = theme.ground;
     ctx.fillRect(sx, p.y + 16, p.w, p.h - 16);
-    // Textura bloques
     ctx.strokeStyle = 'rgba(0,0,0,0.2)';
     ctx.lineWidth = 1;
     for (let bx = sx; bx < sx + p.w; bx += 32) {
       ctx.strokeRect(bx, p.y + 16, 32, 32);
     }
-    // Línea superior decorativa
     ctx.fillStyle = 'rgba(255,255,255,0.3)';
     ctx.fillRect(sx, p.y, p.w, 3);
   } else {
-    // Plataforma flotante
     ctx.fillStyle = '#c8a864';
     ctx.fillRect(sx, p.y, p.w, p.h);
     ctx.fillStyle = '#f0d080';
     ctx.fillRect(sx, p.y, p.w, 6);
     ctx.fillStyle = '#8b6914';
     ctx.fillRect(sx, p.y + p.h - 4, p.w, 4);
-    // Divisiones
     ctx.strokeStyle = 'rgba(0,0,0,0.25)';
     ctx.lineWidth = 1;
     for (let bx = sx; bx < sx + p.w; bx += 32) {
@@ -685,7 +665,6 @@ function drawQBlock(b) {
     ctx.strokeStyle = '#8b6000';
     ctx.lineWidth = 2;
     ctx.strokeRect(sx, b.y + bounce, 40, 40);
-    // Signo ?
     ctx.fillStyle = '#8b6000';
     ctx.font = 'bold 22px serif';
     ctx.textAlign = 'center';
@@ -701,7 +680,6 @@ function drawLetter(lt) {
   const bounce = Math.sin(frameCount * 0.08 + lt.x) * 5;
   const glow = 0.5 + 0.5 * Math.sin(frameCount * 0.06);
 
-  // Glow
   ctx.shadowColor = '#ffdd44';
   ctx.shadowBlur = 15 * glow;
 
@@ -740,7 +718,6 @@ function drawEnemy(e) {
   const sx = e.x - cameraX;
   if (sx < -50 || sx > 860) return;
 
-  // Cuerpo del enemigo (Goomba estilo - "Error de muestreo")
   const wobble = Math.sin(frameCount * 0.15) * 2;
 
   ctx.fillStyle = '#cc2200';
@@ -753,7 +730,6 @@ function drawEnemy(e) {
   ctx.ellipse(sx + 18, e.y + 14 + wobble, 18, 18, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // Ojos
   ctx.fillStyle = 'white';
   ctx.fillRect(sx + 6,  e.y + 7 + wobble, 10, 8);
   ctx.fillRect(sx + 22, e.y + 7 + wobble, 10, 8);
@@ -761,7 +737,6 @@ function drawEnemy(e) {
   ctx.fillRect(sx + 8 + (e.vx > 0 ? 2 : 0),  e.y + 9 + wobble, 5, 5);
   ctx.fillRect(sx + 24 + (e.vx > 0 ? 2 : 0), e.y + 9 + wobble, 5, 5);
 
-  // Cejas malvadas
   ctx.strokeStyle = '#000';
   ctx.lineWidth = 2;
   ctx.beginPath();
@@ -773,7 +748,6 @@ function drawEnemy(e) {
   ctx.lineTo(sx + 19, e.y + 9 + wobble);
   ctx.stroke();
 
-  // Label
   ctx.fillStyle = '#ff8888';
   ctx.font = '7px monospace';
   ctx.textAlign = 'center';
@@ -793,27 +767,21 @@ function drawPlayer() {
     ctx.translate(-sx, 0);
   }
 
-  // Sombra
   ctx.fillStyle = 'rgba(0,0,0,0.2)';
   ctx.ellipse(sx + 16, sy + player.h + 2, 18, 5, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // Cuerpo — personaje tipo académico con toga
-  // Toga/cuerpo
   ctx.fillStyle = '#2244aa';
   ctx.fillRect(sx + 4, sy + 18, 24, 22);
 
-  // Cabeza
   ctx.fillStyle = '#f4c88a';
   ctx.beginPath();
   ctx.arc(sx + 16, sy + 14, 13, 0, Math.PI * 2);
   ctx.fill();
 
-  // Birrete (gorro académico)
   ctx.fillStyle = '#222244';
   ctx.fillRect(sx + 4, sy + 2, 24, 6);
   ctx.fillRect(sx + 8, sy, 16, 4);
-  // Borla
   ctx.strokeStyle = '#ffdd44';
   ctx.lineWidth = 2;
   ctx.beginPath();
@@ -823,7 +791,6 @@ function drawPlayer() {
   ctx.fillStyle = '#ffdd44';
   ctx.fillRect(sx + 25, sy + 7, 4, 4);
 
-  // Ojos
   ctx.fillStyle = 'white';
   ctx.fillRect(sx + 9,  sy + 10, 6, 5);
   ctx.fillRect(sx + 18, sy + 10, 6, 5);
@@ -831,18 +798,15 @@ function drawPlayer() {
   ctx.fillRect(sx + 11, sy + 11, 3, 3);
   ctx.fillRect(sx + 20, sy + 11, 3, 3);
 
-  // Piernas animadas
   const legOff = player.running && player.onGround ? Math.sin(frameCount * 0.3) * 4 : 0;
   ctx.fillStyle = '#1a1a66';
   ctx.fillRect(sx + 6,  sy + 38, 10, 14 + legOff);
   ctx.fillRect(sx + 16, sy + 38, 10, 14 - legOff);
 
-  // Zapatos
   ctx.fillStyle = '#333';
   ctx.fillRect(sx + 4,  sy + 50 + legOff,  14, 6);
   ctx.fillRect(sx + 14, sy + 50 - legOff, 14, 6);
 
-  // Libro en mano
   ctx.fillStyle = '#cc4444';
   ctx.fillRect(sx + 26, sy + 20, 8, 12);
   ctx.fillStyle = '#ff8888';
@@ -860,11 +824,9 @@ function drawFlag() {
   const sx = fl.x - cameraX;
   if (sx < -50 || sx > 860) return;
 
-  // Poste
   ctx.fillStyle = '#888';
   ctx.fillRect(sx - 4, fl.y, 8, fl.h);
 
-  // Bandera
   const wave = Math.sin(frameCount * 0.1) * 5;
   ctx.fillStyle = '#ff4422';
   ctx.beginPath();
@@ -880,11 +842,9 @@ function drawFlag() {
   ctx.fillText('Σ', sx + 24 + wave/2, fl.y + 15);
   ctx.textBaseline = 'alphabetic';
 
-  // Base
   ctx.fillStyle = '#555';
   ctx.fillRect(sx - 20, fl.y + fl.h - 10, 48, 10);
 
-  // Indicador si faltan letras
   if (lettersCollected < lettersNeeded) {
     ctx.fillStyle = 'rgba(255,0,0,0.8)';
     ctx.font = '8px monospace';
@@ -910,7 +870,6 @@ function drawParticles() {
 }
 
 function drawHints() {
-  // Mini-mapa de letras pendientes
   const pendingLetters = level.letters.filter(l => !l.collected);
   if (pendingLetters.length > 0) {
     const worldW = level.worldWidth;
@@ -925,12 +884,10 @@ function drawHints() {
     ctx.fillStyle = '#333';
     ctx.fillRect(mmX, mmY, mmW, mmH);
 
-    // Posición del jugador
     const px = (player.x / worldW) * mmW;
     ctx.fillStyle = '#00ff88';
     ctx.fillRect(mmX + px - 2, mmY, 4, mmH);
 
-    // Letras
     for (const lt of pendingLetters) {
       const lx = (lt.x / worldW) * mmW;
       ctx.fillStyle = '#ffdd44';
@@ -948,7 +905,6 @@ function drawHints() {
   }
 }
 
-// ── BUCLE PRINCIPAL ────────────────────────────────────────────────
 function gameLoop() {
   frameCount++;
   ctx.clearRect(0, 0, 800, 480);
@@ -975,7 +931,6 @@ function gameLoop() {
   animFrame = requestAnimationFrame(gameLoop);
 }
 
-// ── CONTROLES DE ESTADO ────────────────────────────────────────────
 function updateHUD() {
   document.getElementById('h-score').textContent = score.toString().padStart(6, '0');
   document.getElementById('h-level').textContent = currentLevel;
@@ -1056,7 +1011,6 @@ function levelComplete() {
   updateHUD();
 }
 
-// ── DESCARGA ───────────────────────────────────────────────────────
 function downloadGame(e) {
   e.preventDefault();
   const html = document.documentElement.outerHTML;
@@ -1069,8 +1023,6 @@ function downloadGame(e) {
   URL.revokeObjectURL(url);
 }
 
-// ── ARRANQUE ───────────────────────────────────────────────────────
-// Inicializar nivel 1 en background para que se vea el canvas
 level = buildLevel(1);
 player = createPlayer();
 gameLoop();
